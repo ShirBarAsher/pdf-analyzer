@@ -1,6 +1,8 @@
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.json.JSONObject;
+import org.apache.pdfbox.cos.COSDocument;
+import java.io.FileWriter;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -26,12 +28,20 @@ public class PDFAnalyzer {
             return;
         }
 
+        // Create output directory
+        File outputDir = new File("output");
+        if (!outputDir.exists()) {
+            outputDir.mkdir();
+        }
+
         for (File pdfFile : pdfFiles) {
             try (PDDocument document = PDDocument.load(pdfFile)) {
                 // Load the PDF file using PDFBox
                 PDDocumentInformation info = document.getDocumentInformation();
 
                 JSONObject json = new JSONObject();
+                COSDocument cosDoc = document.getDocument();
+
 
                 json.put("PDFVersion", document.getVersion()); // PDF Header Version
 
@@ -41,9 +51,27 @@ public class PDFAnalyzer {
                 json.put("Modification Date", info.getModificationDate());
                 json.put("Title", info.getTitle());
                 json.put("Author", info.getAuthor());
-                json.put("Producer", info.getProducer());
                 json.put("Subject", info.getSubject());
                 json.put("Keywords", info.getKeywords());
+                json.put("PageCount", document.getNumberOfPages());
+
+                json.put("IndirectObjectsCount", cosDoc.getObjects().size());
+
+                json.put("fileSizeBytes", pdfFile.length());//Example of a "Document Fingerprint"
+                json.put("ImageCount", JSONObject.NULL); // Placeholder
+                json.put("fontList", JSONObject.NULL);// Placeholder
+
+
+                // Save JSON to file
+                String jsonFileName = "output/" + pdfFile.getName().replace(".pdf", ".json");
+                try (FileWriter fileWriter = new FileWriter(jsonFileName)) {
+                    fileWriter.write(json.toString(4));
+                    System.out.println("Saved JSON to: " + jsonFileName);
+                } catch (Exception e) {
+                    System.err.println("Error writing JSON for " + pdfFile.getName());
+                    e.printStackTrace();
+                }
+
 
             } catch (Exception e) {
                 // Handle errors
